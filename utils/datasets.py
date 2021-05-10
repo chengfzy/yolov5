@@ -56,20 +56,37 @@ def exif_size(img):
     return s
 
 
-def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=False, cache=False, pad=0.0, rect=False,
-                      rank=-1, world_size=1, workers=8, image_weights=False, quad=False, prefix=''):
+def create_dataloader(path,
+                      imgsz,
+                      batch_size,
+                      stride,
+                      opt,
+                      hyp=None,
+                      augment=False,
+                      cache=False,
+                      pad=0.0,
+                      rect=False,
+                      rank=-1,
+                      world_size=1,
+                      workers=8,
+                      image_weights=False,
+                      quad=False,
+                      prefix=''):
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
-        dataset = LoadImagesAndLabels(path, imgsz, batch_size,
-                                      augment=augment,  # augment images
-                                      hyp=hyp,  # augmentation hyperparameters
-                                      rect=rect,  # rectangular training
-                                      cache_images=cache,
-                                      single_cls=opt.single_cls,
-                                      stride=int(stride),
-                                      pad=pad,
-                                      image_weights=image_weights,
-                                      prefix=prefix)
+        dataset = LoadImagesAndLabels(
+            path,
+            imgsz,
+            batch_size,
+            augment=augment,  # augment images
+            hyp=hyp,  # augmentation hyperparameters
+            rect=rect,  # rectangular training
+            cache_images=cache,
+            single_cls=opt.single_cls,
+            stride=int(stride),
+            pad=pad,
+            image_weights=image_weights,
+            prefix=prefix)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -120,6 +137,7 @@ class _RepeatSampler(object):
 
 
 class LoadImages:  # for inference
+
     def __init__(self, path, img_size=640, stride=32):
         p = str(Path(path).absolute())  # os-agnostic absolute path
         if '*' in p:
@@ -200,6 +218,7 @@ class LoadImages:  # for inference
 
 
 class LoadWebcam:  # for inference
+
     def __init__(self, pipe='0', img_size=640, stride=32):
         self.img_size = img_size
         self.stride = stride
@@ -258,6 +277,7 @@ class LoadWebcam:  # for inference
 
 
 class LoadStreams:  # multiple IP or RTSP cameras
+
     def __init__(self, sources='streams.txt', img_size=640, stride=32):
         self.mode = 'stream'
         self.img_size = img_size
@@ -345,8 +365,20 @@ def img2label_paths(img_paths):
 
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
-    def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_images=False, single_cls=False, stride=32, pad=0.0, prefix=''):
+
+    def __init__(self,
+                 path,
+                 img_size=640,
+                 batch_size=16,
+                 augment=False,
+                 hyp=None,
+                 rect=False,
+                 image_weights=False,
+                 cache_images=False,
+                 single_cls=False,
+                 stride=32,
+                 pad=0.0,
+                 prefix=''):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -551,7 +583,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         if self.augment:
             # Augment imagespace
             if not mosaic:
-                img, labels = random_perspective(img, labels,
+                img, labels = random_perspective(img,
+                                                 labels,
                                                  degrees=hyp['degrees'],
                                                  translate=hyp['translate'],
                                                  scale=hyp['scale'],
@@ -613,8 +646,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         for i in range(n):  # zidane torch.zeros(16,3,720,1280)  # BCHW
             i *= 4
             if random.random() < 0.5:
-                im = F.interpolate(img[i].unsqueeze(0).float(), scale_factor=2., mode='bilinear', align_corners=False)[
-                    0].type(img[i].type())
+                im = F.interpolate(img[i].unsqueeze(0).float(), scale_factor=2., mode='bilinear',
+                                   align_corners=False)[0].type(img[i].type())
                 l = label[i]
             else:
                 im = torch.cat((torch.cat((img[i], img[i + 1]), 1), torch.cat((img[i + 2], img[i + 3]), 1)), 2)
@@ -716,7 +749,9 @@ def load_mosaic(self, index):
     # img4, labels4 = replicate(img4, labels4)  # replicate
 
     # Augment
-    img4, labels4 = random_perspective(img4, labels4, segments4,
+    img4, labels4 = random_perspective(img4,
+                                       labels4,
+                                       segments4,
                                        degrees=self.hyp['degrees'],
                                        translate=self.hyp['translate'],
                                        scale=self.hyp['scale'],
@@ -790,7 +825,9 @@ def load_mosaic9(self, index):
     # img9, labels9 = replicate(img9, labels9)  # replicate
 
     # Augment
-    img9, labels9 = random_perspective(img9, labels9, segments9,
+    img9, labels9 = random_perspective(img9,
+                                       labels9,
+                                       segments9,
                                        degrees=self.hyp['degrees'],
                                        translate=self.hyp['translate'],
                                        scale=self.hyp['scale'],
@@ -851,7 +888,14 @@ def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scale
     return img, ratio, (dw, dh)
 
 
-def random_perspective(img, targets=(), segments=(), degrees=10, translate=.1, scale=.1, shear=10, perspective=0.0,
+def random_perspective(img,
+                       targets=(),
+                       segments=(),
+                       degrees=10,
+                       translate=.1,
+                       scale=.1,
+                       shear=10,
+                       perspective=0.0,
                        border=(0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # targets = [cls, xyxy]
