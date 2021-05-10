@@ -24,7 +24,7 @@
 !cfg/yolov3*.cfg
 
 storage.googleapis.com
-runs/*
+runs*/*
 data/*
 !data/images/zidane.jpg
 !data/images/bus.jpg
@@ -87,7 +87,6 @@ wheels/
 wandb/
 .installed.cfg
 *.egg
-
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -164,7 +163,6 @@ ENV*/
 # mypy
 .mypy_cache/
 
-
 # https://github.com/github/gitignore/blob/master/Global/macOS.gitignore -----------------------------------------------
 
 # General
@@ -195,7 +193,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-
 # https://github.com/github/gitignore/blob/master/Global/JetBrains.gitignore
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
@@ -205,9 +202,9 @@ Temporary Items
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/dictionaries
-.html  # Bokeh Plots
-.pg  # TensorFlow Frozen Graphs
-.avi # videos
+.html # Bokeh Plots
+.pg   # TensorFlow Frozen Graphs
+.avi  # videos
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/
@@ -250,3 +247,6 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 fabric.properties
+
+# project folders
+.history
