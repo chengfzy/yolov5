@@ -368,7 +368,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
     def __init__(self,
                  path,
-                 img_size=[640, 640],
+                 img_size=640,
                  batch_size=16,
                  augment=False,
                  hyp=None,
@@ -384,7 +384,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.hyp = hyp
         self.image_weights = image_weights
         self.rect = False if image_weights else rect
-        self.mosaic = self.augment and not self.rect  # load 4 images at a time into a mosaic (only during training)
+        self.mosaic = False  # load 4 images at a time into a mosaic (only during training)
         self.mosaic_border = [-img_size[0] // 2, -img_size[1] // 2]
         self.stride = stride
         self.path = path
@@ -522,14 +522,14 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 x[im_file] = [l, shape, segments]
             except Exception as e:
                 nc += 1
-                print(f'{prefix}WARNING: Ignoring corrupted image and/or label {im_file}: {e}')
+                logging.info(f'{prefix}WARNING: Ignoring corrupted image and/or label {im_file}: {e}')
 
             pbar.desc = f"{prefix}Scanning '{path.parent / path.stem}' images and labels... " \
                         f"{nf} found, {nm} missing, {ne} empty, {nc} corrupted"
         pbar.close()
 
         if nf == 0:
-            print(f'{prefix}WARNING: No labels found in {path}. See {help_url}')
+            logging.info(f'{prefix}WARNING: No labels found in {path}. See {help_url}')
 
         x['hash'] = get_hash(self.label_files + self.img_files)
         x['results'] = nf, nm, ne, nc, i + 1
@@ -572,13 +572,13 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             img, (h0, w0), (h, w) = load_image(self, index)
 
             # Letterbox
-            shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
-            img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
-            shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
+            # shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
+            # img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
+            shapes = (h0, w0), ((h / h0, w / w0), [0, 0])  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
             if labels.size:  # normalized xywh to pixel xyxy format
-                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], ratio[0] * w, ratio[1] * h, padw=pad[0], padh=pad[1])
+                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h)
 
         if self.augment:
             # Augment imagespace
@@ -605,17 +605,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             labels[:, [1, 3]] /= img.shape[1]  # normalized width 0-1
 
         if False and self.augment:
-            # flip up-down
-            if random.random() < hyp['flipud']:
-                img = np.flipud(img)
-                if nL:
-                    labels[:, 2] = 1 - labels[:, 2]
-
-            # flip left-right
-            if random.random() < hyp['fliplr']:
-                img = np.fliplr(img)
-                if nL:
-                    labels[:, 1] = 1 - labels[:, 1]
+            pass
 
         labels_out = torch.zeros((nL, 6))
         if nL:
@@ -674,7 +664,8 @@ def load_image(self, index):
         # if r != 1:  # if sizes are not equal
         #     img = cv2.resize(img, (int(w0 * r), int(h0 * r)),
         #                      interpolation=cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR)
-        img = cv2.resize(img, (int(w0), int(h0)), interpolation=cv2.INTER_LINEAR)
+        h, w = self.img_size
+        img = cv2.resize(img, (int(w), int(h)), interpolation=cv2.INTER_LINEAR)
         return img, (h0, w0), img.shape[:2]  # img, hw_original, hw_resized
     else:
         return self.imgs[index], self.img_hw0[index], self.img_hw[index]  # img, hw_original, hw_resized

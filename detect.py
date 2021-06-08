@@ -32,12 +32,6 @@ def detect(opt):
     # Load model
     model = attempt_load(weights, map_location=device)  # load FP32 model
     stride = int(model.stride.max())  # model stride
-    # check img_size
-    if len(imgsz) == 1:
-        imgsz = check_img_size(imgsz, s=stride)
-    else:
-        imgsz = [check_img_size(imgsz[0], s=stride), check_img_size(imgsz[1], s=stride)]
-
     names = model.module.names if hasattr(model, 'module') else model.names  # get class names
     if half:
         model.half()  # to FP16
@@ -92,6 +86,7 @@ def detect(opt):
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
             s += '%gx%g ' % img.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+            imc = im0.copy() if opt.save_crop else im0  # for opt.save_crop
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -114,15 +109,18 @@ def detect(opt):
                         label = None if opt.hide_labels else (names[c] if opt.hide_conf else f'{names[c]} {conf:.2f}')
                         plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=opt.line_thickness)
                         if opt.save_crop:
-                            save_one_box(xyxy, im0s, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                            save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
 
             # Stream results
             if view_img:
-                cv2.imshow(str(p), im0)
-                cv2.waitKey(1)  # 1 millisecond
+                # resize and show
+                ratio = min(1.0, 1080. / max(im0.shape[:2]))
+                show_img = cv2.resize(im0, None, fx=ratio, fy=ratio)
+                cv2.imshow('Detected Result', show_img)
+                cv2.waitKey(1000)  # 1 millisecond
 
             # Save results (image with detections)
             if save_img:
@@ -154,7 +152,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='data/images', help='source')  # file/folder, 0 for webcam
-    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='inference size (pixels)')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[320, 1792], help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
