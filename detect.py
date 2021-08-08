@@ -97,7 +97,7 @@ def detect(opt):
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
-                detect_chars = []  # (char, x)
+                detect_chars = []  # (char, x0, x1, y0, y1, conf)
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -106,7 +106,7 @@ def detect(opt):
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
                     # add to detect result
-                    detect_chars.append((int(xyxy[0]), names[int(cls)]))
+                    detect_chars.append((names[int(cls)], int(xyxy[0]), int(xyxy[1]), int(xyxy[2]), int(xyxy[3]), conf))
 
                     if save_img or opt.save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
@@ -119,9 +119,11 @@ def detect(opt):
             print(f'{s}Done. ({t2 - t1:.3f}s)')
 
             # sort detect char by x
-            detect_chars = sorted(detect_chars, key=lambda v: v[0])
-            detect_chars = ''.join([v[1] for v in detect_chars])
-            print(f'detect chars: {detect_chars}')
+            detect_chars = sorted(detect_chars, key=lambda v: v[1])
+            for n, v in enumerate(detect_chars):
+                print(f'\t[{n}/{len(detect_chars)}] char = {v[0]}, (x0, y0, x1, y1) = {v[1], v[2], v[3], v[4]}'
+                      f', conf = {v[5]:.3f}')
+            print(f'detect chars: {"".join([v[0] for v in detect_chars])}\n')
 
             # Stream results
             if view_img:
