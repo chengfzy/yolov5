@@ -97,12 +97,16 @@ def detect(opt):
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
+                detect_chars = []  # (char, x)
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+                    # add to detect result
+                    detect_chars.append((int(xyxy[0]), names[int(cls)]))
 
                     if save_img or opt.save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
@@ -114,13 +118,18 @@ def detect(opt):
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
 
+            # sort detect char by x
+            detect_chars = sorted(detect_chars, key=lambda v: v[0])
+            detect_chars = ''.join([v[1] for v in detect_chars])
+            print(f'detect chars: {detect_chars}')
+
             # Stream results
             if view_img:
                 # resize and show
                 ratio = min(1.0, 1080. / max(im0.shape[:2]))
                 show_img = cv2.resize(im0, None, fx=ratio, fy=ratio)
                 cv2.imshow('Detected Result', show_img)
-                cv2.waitKey(1000)  # 1 millisecond
+                cv2.waitKey(0)  # 1 millisecond
 
             # Save results (image with detections)
             if save_img:
